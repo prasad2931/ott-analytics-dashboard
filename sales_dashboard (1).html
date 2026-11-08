@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0d1a; color: #fff; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 14px 24px; display: flex; align-items: center; gap: 32px; border-bottom: 1px solid #2a2a4a; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .logo-sub { font-size: 11px; color: #8888aa; }
+  nav { display: flex; gap: 8px; margin-left: 20px; }
+  nav button { background: none; border: none; color: #8888aa; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  nav button.active, nav button:hover { background: rgba(102,126,234,0.2); color: #a78bfa; }
+
+  .main { padding: 20px 24px; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .kpi { background: linear-gradient(135deg, #1e1e3a, #252550); border-radius: 12px; padding: 18px 20px; border: 1px solid #2a2a5a; }
+  .kpi-label { font-size: 11px; color: #8888bb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .kpi-badge { font-size: 11px; display: inline-flex; align-items: center; gap: 4px; background: rgba(52,211,153,0.15); color: #34d399; padding: 3px 8px; border-radius: 20px; }
+  .kpi-badge.red { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  .kpi:nth-child(1) .kpi-value { color: #60a5fa; }
+  .kpi:nth-child(2) .kpi-value { color: #f472b6; }
+  .kpi:nth-child(3) .kpi-value { color: #a78bfa; }
+  .kpi:nth-child(4) .kpi-value { color: #34d399; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 380px; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .card { background: linear-gradient(135deg, #1e1e3a, #252550); border-radius: 12px; padding: 20px; border: 1px solid #2a2a5a; }
+  .card-title { font-size: 13px; font-weight: 600; color: #ccc; margin-bottom: 16px; }
+
+  .year-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .year-tab { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid #3a3a6a; color: #8888bb; cursor: pointer; background: none; }
+  .year-tab.active { background: linear-gradient(135deg, #667eea, #764ba2); border-color: transparent; color: #fff; }
+
+  .segment-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .seg-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .seg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .seg-name { flex: 1; color: #bbb; }
+  .seg-pct { color: #fff; font-weight: 600; width: 36px; text-align: right; }
+  .seg-val { color: #8888bb; width: 56px; text-align: right; }
+
+  .donut-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
+
+  .city-list { display: flex; flex-direction: column; gap: 8px; }
+  .city-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .city-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .city-name { flex: 1; color: #bbb; }
+  .city-val { color: #fff; font-weight: 600; }
+
+  .cat-list { display: flex; flex-direction: column; gap: 10px; }
+  .cat-row { font-size: 12px; }
+  .cat-top { display: flex; justify-content: space-between; margin-bottom: 4px; color: #bbb; }
+  .cat-bar-bg { background: #2a2a4a; border-radius: 4px; height: 6px; }
+  .cat-bar { height: 6px; border-radius: 4px; background: linear-gradient(90deg, #667eea, #a78bfa); }
+
+  canvas { max-height: 240px; }
+
+  .footer { text-align: center; padding: 16px; color: #555; font-size: 11px; }
+  .author { color: #667eea; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-text">Sales Analytics</div>
+      <div class="logo-sub">Dashboard</div>
+    </div>
+  </div>
+  <nav>
+    <button class="active">Dashboard</button>
+    <button>Profitability</button>
+    <button>Analysis</button>
+    <button>Dataset</button>
+    <button>Key Takeaways</button>
+  </nav>
+</div>
+
+<div class="main">
+
+  <!-- KPI Row -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value">$88,745</div>
+      <span class="kpi-badge">▲ 56.63% YoY</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Expense</div>
+      <div class="kpi-value">$64,495</div>
+      <span class="kpi-badge">▲ 42.33% YoY</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value">$22,390</div>
+      <span class="kpi-badge">▲ 97.32% YoY</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Profit Margin %</div>
+      <div class="kpi-value">25%</div>
+      <span class="kpi-badge">▲ Strong</span>
+    </div>
+  </div>
+
+  <!-- Main Chart + Revenue by City -->
+  <div class="grid-2">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="card-title" style="margin:0">Monthly Revenue Trends</div>
+        <div class="year-tabs">
+          <button class="year-tab">2020</button>
+          <button class="year-tab">2021</button>
+          <button class="year-tab active">2022</button>
+          <button class="year-tab">2023</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-bottom:12px;">
+        <div class="segment-list" style="flex:0 0 220px;">
+          <div class="seg-row"><div class="seg-dot" style="background:#f472b6"></div><span class="seg-name">Consumer</span><span class="seg-pct">35%</span><span class="seg-val">$51,808</span></div>
+          <div class="seg-row"><div class="seg-dot" style="background:#a78bfa"></div><span class="seg-name">Corporate</span><span class="seg-pct">25%</span><span class="seg-val">$37,118</span></div>
+          <div class="seg-row"><div class="seg-dot" style="background:#38bdf8"></div><span class="seg-name">Enterprise</span><span class="seg-pct">15%</span><span class="seg-val">$22,153</span></div>
+          <div class="seg-row"><div class="seg-dot" style="background:#34d399"></div><span class="seg-name">Retail</span><span class="seg-pct">25%</span><span class="seg-val">$36,800</span></div>
+        </div>
+      </div>
+      <canvas id="revenueChart"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Revenue by City</div>
+      <div class="donut-wrap"><canvas id="cityDonut" style="max-height:160px;max-width:160px;"></canvas></div>
+      <div class="city-list">
+        <div class="city-row"><div class="city-dot" style="background:#f472b6"></div><span class="city-name">Houston</span><span class="city-val">$27,154</span></div>
+        <div class="city-row"><div class="city-dot" style="background:#a78bfa"></div><span class="city-name">Los Angeles</span><span class="city-val">$37,759</span></div>
+        <div class="city-row"><div class="city-dot" style="background:#38bdf8"></div><span class="city-name">Miami</span><span class="city-val">$39,658</span></div>
+        <div class="city-row"><div class="city-dot" style="background:#34d399"></div><span class="city-name">New York</span><span class="city-val">$33,701</span></div>
+        <div class="city-row"><div class="city-dot" style="background:#fbbf24"></div><span class="city-name">Phoenix</span><span class="city-val">$9,607</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Expense vs Budget</div>
+      <canvas id="expenseChart"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Revenue by Category</div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <canvas id="catDonut" style="max-height:120px;max-width:120px;flex-shrink:0;"></canvas>
+        <div class="cat-list" style="flex:1;">
+          <div class="cat-row"><div class="cat-top"><span>Office Supplies</span><span style="color:#a78bfa;">$49,664</span></div><div class="cat-bar-bg"><div class="cat-bar" style="width:100%"></div></div></div>
+          <div class="cat-row"><div class="cat-top"><span>Accessories</span><span style="color:#a78bfa;">$49,265</span></div><div class="cat-bar-bg"><div class="cat-bar" style="width:99%"></div></div></div>
+          <div class="cat-row"><div class="cat-top"><span>Furniture</span><span style="color:#a78bfa;">$27,154</span></div><div class="cat-bar-bg"><div class="cat-bar" style="width:55%"></div></div></div>
+          <div class="cat-row"><div class="cat-top"><span>Technology</span><span style="color:#a78bfa;">$21,796</span></div><div class="cat-bar-bg"><div class="cat-bar" style="width:44%"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Profit Trend</div>
+      <canvas id="profitChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">Built by <span class="author">Durga Prasad Reddy Bodalla</span> · Data Analytics Portfolio · Power BI · SQL · Python</div>
+
+<script>
+const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const revenue = [9600,10200,11500,13100,14400,15000,14800,13500,12800,13200,null,null];
+
+// Revenue trend chart
+new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      { type: 'line', data: revenue, borderColor: '#fff', borderWidth: 2, pointBackgroundColor: '#fff', pointRadius: 4, tension: 0.4, fill: false, order: 1 },
+      { type: 'bar', data: revenue, backgroundColor: 'rgba(102,126,234,0.5)', borderRadius: 4, order: 2 }
+    ]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a4a' } }, y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a4a' } } }, maintainAspectRatio: true }
+});
+
+// City donut
+new Chart(document.getElementById('cityDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Houston','Los Angeles','Miami','New York','Phoenix'],
+    datasets: [{ data: [27154,37759,39658,33701,9607], backgroundColor: ['#f472b6','#a78bfa','#38bdf8','#34d399','#fbbf24'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { display: false } }, cutout: '70%', maintainAspectRatio: true }
+});
+
+// Expense vs budget
+new Chart(document.getElementById('expenseChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      { label: 'Actual', data: [11,10,12,12,12,12,12,11,10,10,10,10], backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 3 },
+      { label: 'Budget', type: 'line', data: [10,10,11,11,11,10,10,10,10,10,10,10], borderColor: '#f472b6', borderWidth: 2, pointRadius: 3, tension: 0.3, fill: false }
+    ]
+  },
+  options: { plugins: { legend: { labels: { color: '#888', font: { size: 10 } } } }, scales: { x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#2a2a4a' } }, y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#2a2a4a' } } }, maintainAspectRatio: true }
+});
+
+// Category donut
+new Chart(document.getElementById('catDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Office Supplies','Accessories','Furniture','Technology'],
+    datasets: [{ data: [49664,49265,27154,21796], backgroundColor: ['#38bdf8','#a78bfa','#f472b6','#34d399'], borderWidth: 0 }]
+  },
+  options: { plugins: { legend: { display: false } }, cutout: '65%', maintainAspectRatio: true }
+});
+
+// Profit trend
+new Chart(document.getElementById('profitChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [{
+      data: [2100,2400,2800,3200,3600,3900,3700,3400,3100,3300,null,null],
+      borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#34d399', pointRadius: 4, borderWidth: 2
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a4a' } }, y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a4a' } } }, maintainAspectRatio: true }
+});
+
+// Year tab switching
+document.querySelectorAll('.year-tab').forEach(btn => {
+  btn.addEventListener('click', () => { document.querySelectorAll('.year-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); });
+});
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => { document.querySelectorAll('nav button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); });
+});
+</script>
+</body>
+</html>
